@@ -23,7 +23,7 @@ def logout_on_exception(func):
             return value
         except Exception as err:
             print(f'Error occurred! -- {err}')
-            print(f'Logging out...')
+            print(f'Logging out now...')
             await client.logout()
 
     return wrapper_decorator
@@ -52,7 +52,9 @@ async def on_ready():
     print(f'{client.user} is connected to the following guild:\n'
           f'{guild.name} (id: {guild.id})')
 
-    raise Exception
+    members = '\n - '.join([member.name for member in guild.members])
+    print(f'Guild Members: \n - {members}')
+
     await logout(client)
 
 
