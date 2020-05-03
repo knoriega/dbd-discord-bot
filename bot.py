@@ -11,12 +11,14 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-client = discord.Client()
-
 
 class RuntimeAttrs:
     def __init__(self):
         pass
+
+
+client = discord.Client()
+setattr(client, 'runtime_attr', RuntimeAttrs())
 
 
 def logout_on_exception(func):
@@ -52,6 +54,7 @@ async def on_ready():
 
     # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
     guild = discord.utils.get(client.guilds, name=GUILD)
+    roles = guild.roles
 
     print(f'{client.user} is connected to the following guild:\n'
           f'{guild.name} (id: {guild.id})')
@@ -60,30 +63,35 @@ async def on_ready():
     print(f'Guild Members: \n - {members}')
 
     # Set runtime attrs
-    setattr(client, 'runtime_attr', RuntimeAttrs())
     setattr(client.runtime_attr, 'members_joined', 0)
     setattr(client.runtime_attr, 'primary_guild', guild)
+    setattr(client.runtime_attr, 'roles', roles)
     print(f'Ready to handle new members!')
 
 
 @client.event
 @logout_on_exception
 async def on_member_join(member):
+    await member.edit(roles=client.runtime_attr.roles[:2])  # Set to newcomer
     rules = discord.utils.get(client.runtime_attr.primary_guild.channels,
                               name='rules')
 
-    await member.create_dm()
-    dm = member.dm_channel
-    await dm.send(f'Welcome to the realm {member.mention}! '
-                  f'Please read the rules before entering: {rules.mention}')
+    intros = discord.utils.get(client.runtime_attr.primary_guild.channels,
+                               name='introductions')
+
+    spawn_point = discord.utils.get(client.runtime_attr.primary_guild.channels,
+                                    name='spawn-point')
+
+    await spawn_point.send(f'Welcome to the realm {member.mention}! \n'
+                           f'Please read the rules to access the rest of the server: {rules.mention} \n'
+                           f'Introduce yourself in the {intros.mention} channel and have fun!')
 
     client.runtime_attr.members_joined += 1
     if client.runtime_attr.members_joined == 1:
         print(f'Handled one member join! Logging out now...')
         await logout(client)
 
-
-# TODO: Change new member role to 'newcomer'
+# TODO: Welome msg in spawn-point
 # TODO: New member w/ 'newcomer' role must react to rules to be upgraded
 
 
