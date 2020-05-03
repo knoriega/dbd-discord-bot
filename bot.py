@@ -1,19 +1,10 @@
 import os
 import asyncio
 import discord
-import logging
 import functools
 
 from time import sleep
 from dotenv import load_dotenv
-
-# logging.basicConfig(level=logging.DEBUG)
-
-async_logger = logging.getLogger('asyncio')
-async_logger.setLevel(logging.DEBUG)
-
-# discord_logger = logging.getLogger('discord')
-# discord_logger.setLevel(logging.DEBUG)
 
 load_dotenv()
 
