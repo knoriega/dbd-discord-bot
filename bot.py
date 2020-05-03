@@ -83,5 +83,9 @@ async def on_member_join(member):
         await logout(client)
 
 
+# TODO: Change new member role to 'newcomer'
+# TODO: New member w/ 'newcomer' role must react to rules to be upgraded
+
+
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(client.start(TOKEN))
