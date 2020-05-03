@@ -91,7 +91,6 @@ async def on_member_join(member):
         print(f'Handled one member join! Logging out now...')
         await logout(client)
 
-# TODO: Welome msg in spawn-point
 # TODO: New member w/ 'newcomer' role must react to rules to be upgraded
 
 
