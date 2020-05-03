@@ -44,10 +44,8 @@ async def on_ready():
     """On connect, what do we do? Stuff and things"""
     print(f'{client.user} has connected to Discord!')
 
-    for guild in client.guilds:
-        print(f'Guild: {guild}')
-        if guild.name == GUILD:
-            break
+    # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
+    guild = discord.utils.get(client.guilds, name=GUILD)
 
     print(f'{client.user} is connected to the following guild:\n'
           f'{guild.name} (id: {guild.id})')
