@@ -14,6 +14,11 @@ GUILD = os.getenv('DISCORD_GUILD')
 client = discord.Client()
 
 
+class RuntimeAttrs:
+    def __init__(self):
+        pass
+
+
 def logout_on_exception(func):
     """Try-catch block for async Discord callbacks"""
     @functools.wraps(func)
@@ -41,6 +46,7 @@ async def logout(client):
 @client.event
 @logout_on_exception
 async def on_ready():
+
     """On connect, what do we do? Stuff and things"""
     print(f'{client.user} has connected to Discord!')
 
@@ -53,7 +59,29 @@ async def on_ready():
     members = '\n - '.join([member.name for member in guild.members])
     print(f'Guild Members: \n - {members}')
 
-    await logout(client)
+    # Set runtime attrs
+    setattr(client, 'runtime_attr', RuntimeAttrs())
+    setattr(client.runtime_attr, 'members_joined', 0)
+    setattr(client.runtime_attr, 'primary_guild', guild)
+    print(f'Ready to handle new members!')
+
+
+@client.event
+@logout_on_exception
+async def on_member_join(member):
+    rules = discord.utils.get(client.runtime_attr.primary_guild.channels,
+                              name='rules')
+
+    await member.create_dm()
+    dm = member.dm_channel
+    await dm.send(f'Welcome to the realm {member.mention}! '
+                  f'Please read the rules before entering: {rules.mention}')
+
+    client.runtime_attr.members_joined += 1
+
+    if client.runtime_attr.members_joined == 1:
+        print(f'Handled one member join! Logging out now...')
+        await logout(client)
 
 
 if __name__ == '__main__':
