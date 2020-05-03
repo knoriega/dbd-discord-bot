@@ -78,7 +78,6 @@ async def on_member_join(member):
                   f'Please read the rules before entering: {rules.mention}')
 
     client.runtime_attr.members_joined += 1
-
     if client.runtime_attr.members_joined == 1:
         print(f'Handled one member join! Logging out now...')
         await logout(client)
