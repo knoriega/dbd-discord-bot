@@ -84,23 +84,20 @@ async def on_error(event, *args, **kwargs):
     await logout()
 
 
-# TODO: New member w/ 'newcomer' role must react to rules to be upgraded
-
-
 @client.event
 async def on_raw_reaction_add(payload):
     print(f'Handling reaction!: {payload}')
     newcomer_roles = [roles['@everyone'], roles['newcomer']]
     msg = rules_msg[0]
 
-    def msg_check():
+    def user_read_the_rules():
         if (payload.channel_id == msg.channel.id and
                 payload.message_id == msg.id and
                 payload.emoji.name == emojize(':thumbsup:', use_aliases=True)
                 and payload.member.roles == newcomer_roles):
             return True
 
-    if msg_check():
+    if user_read_the_rules():
         # Update roles
         await payload.member.edit(roles=[roles['@everyone'], roles['normal']])
         print(f'Updated {payload.member} role to "normal"')
@@ -110,4 +107,8 @@ async def on_raw_reaction_add(payload):
             await logout()
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(client.start(TOKEN))
+    try:
+        asyncio.get_event_loop().run_until_complete(client.start(TOKEN))
+    except KeyboardInterrupt:
+        print('--------------- Manual Exit ---------------')
+        asyncio.get_event_loop().run_until_complete(logout())
