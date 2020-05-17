@@ -94,9 +94,9 @@ async def on_raw_reaction_add(payload):
     msg = rules_msg[0]
 
     def msg_check():
-        if (payload.channel_id == msg.channel.id and 
-                payload.message_id == msg.id and 
-                payload.emoji.name == emojize(':thumbsup:', use_aliases=True) 
+        if (payload.channel_id == msg.channel.id and
+                payload.message_id == msg.id and
+                payload.emoji.name == emojize(':thumbsup:', use_aliases=True)
                 and payload.member.roles == newcomer_roles):
             return True
 
