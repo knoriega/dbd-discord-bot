@@ -2,10 +2,12 @@ import os
 import asyncio
 import discord
 import traceback
+import logging
 
 from emoji import emojize
 from time import sleep
 from dotenv import load_dotenv
+from loggers import new_logger, formatter
 
 load_dotenv()
 
@@ -20,6 +22,12 @@ class DbDClient(discord.Client):
         self.roles = {}
         self.rule_msg = None
         self.members_added = 0
+        self.logger = new_logger(self.__class__.__name__, logging.INFO,
+                                 'bot.log')
+        c_handler = logging.StreamHandler()
+        c_handler.setFormatter(formatter)
+        c_handler.setLevel(logging.INFO)
+        self.logger.addHandler(c_handler)
 
 
 client = DbDClient()
@@ -31,13 +39,14 @@ async def logout():
     for i in range(3, 0, -1):
         print(f'{i}...')
         sleep(1)
+    client.logger.info('Disconnecting!')
     await client.logout()
 
 
 @client.event
 async def on_ready():
     """On connect, what do we do? Stuff and things"""
-    print(f'{client.user} has connected to Discord!')
+    client.logger.info(f'{client.user} has connected to Discord!')
     await client.change_presence(activity=discord.Game('at the campfire...'))
 
     # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
@@ -48,8 +57,8 @@ async def on_ready():
     setattr(client, 'newcomer_roles', [client.roles['@everyone'],
                                        client.roles['newcomer']])
 
-    print(f'{client.user} is connected to the following guild:\n'
-          f'{guild.name} (id: {guild.id})')
+    client.logger.info(f'{client.user} is connected to the following guild:\n'
+                       f'{guild.name} (id: {guild.id})')
 
     members = '\n - '.join([member.name for member in guild.members])
     print(f'Guild Members: \n - {members}')
@@ -59,12 +68,12 @@ async def on_ready():
     rule_pins = await rules.pins()
     client.rules_msg = rule_pins[0]
 
-    print(f'Ready to handle new members!')
+    client.logger.info(f'Ready to handle new members!')
 
 
 @client.event
 async def on_member_join(member):
-    print(f'New member! {member}')
+    client.logger.info(f'New member! {member}')
     guild = client.primary_guild
     await member.edit(roles=client.newcomer_roles)
 
@@ -77,14 +86,15 @@ async def on_member_join(member):
                            f'server: {rules.mention} \n'
                            f'Introduce yourself in the {intros.mention} '
                            f'channel and have fun!')
+    client.logger.info(f'Sent new welcome message for {member}')
 
 
 @client.event
 async def on_error(event, *args, **kwargs):
     # Logging out on exception
     print(f'Exception! {emojize(":worried:", use_aliases=True)} {args}')
-    print(traceback.format_exc())
-    print('Logging out b/c of exception...')
+    client.logger.info(traceback.format_exc())
+    client.logger.info('Logging out b/c of exception...')
     await logout()
 
 
@@ -103,12 +113,9 @@ async def on_raw_reaction_add(payload):
         # Update roles
         await payload.member.edit(roles=[client.roles['@everyone'],
                                          client.roles['normal']])
-        print(f'Updated {payload.member} role to "normal"')
+        client.logger.info(f'Updated {payload.member} role to "normal"')
         client.members_added += 1
 
-    if client.members_added == 1:
-        print(f'Handled one member join! Logging out now...')
-        await logout()
 
 if __name__ == '__main__':
     try:
