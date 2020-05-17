@@ -12,18 +12,21 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-client = discord.Client()
 
-# Properties -- Initialized here, use in a proper bot class later
-guilds = {}
-roles = {}  # Key: role names, Value: role objects
-channels = {}
-rules_msg = []
-members = []
+class DbDClient(discord.Client):
+    def __init__(self):
+        super().__init__()
+        self.primary_guild = None
+        self.roles = {}
+        self.rule_msg = None
+        self.members_added = 0
+
+
+client = DbDClient()
 
 
 async def logout():
-    """D/c from Discord in 5"""
+    """D/c from Discord in 3"""
     print(f'Disconnecting in...')
     for i in range(3, 0, -1):
         print(f'{i}...')
@@ -39,9 +42,11 @@ async def on_ready():
 
     # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
     guild = discord.utils.get(client.guilds, name=GUILD)
-    guilds['primary'] = guild
+    client.primary_guild = guild
 
-    roles.update({role.name: role for role in guild.roles})
+    client.roles.update({role.name: role for role in guild.roles})
+    setattr(client, 'newcomer_roles', [client.roles['@everyone'],
+                                       client.roles['newcomer']])
 
     print(f'{client.user} is connected to the following guild:\n'
           f'{guild.name} (id: {guild.id})')
@@ -51,28 +56,27 @@ async def on_ready():
 
     # Get rules message
     rules = discord.utils.get(guild.channels, name='rules')
-    channels['rules'] = rules
     rule_pins = await rules.pins()
-    rules_msg.append(rule_pins[0])
+    client.rules_msg = rule_pins[0]
 
     print(f'Ready to handle new members!')
 
 
 @client.event
 async def on_member_join(member):
-    await member.edit(roles=[roles['@everyone'], roles['newcomer']])
-    guild = guilds['primary']
+    print(f'New member! {member}')
+    guild = client.primary_guild
+    await member.edit(roles=client.newcomer_roles)
 
     intros = discord.utils.get(guild.channels, name='introductions')
     spawn_point = discord.utils.get(guild.channels, name='spawn-point')
+    rules = discord.utils.get(guild.channels, name='rules')
 
     await spawn_point.send(f'Welcome to the realm {member.mention}! \n'
                            f'Please read the rules to access the rest of the '
-                           f'server: {channels["rules"].mention} \n'
+                           f'server: {rules.mention} \n'
                            f'Introduce yourself in the {intros.mention} '
                            f'channel and have fun!')
-
-    members.append(member)
 
 
 @client.event
@@ -87,24 +91,24 @@ async def on_error(event, *args, **kwargs):
 @client.event
 async def on_raw_reaction_add(payload):
     print(f'Handling reaction!: {payload}')
-    newcomer_roles = [roles['@everyone'], roles['newcomer']]
-    msg = rules_msg[0]
 
     def user_read_the_rules():
-        if (payload.channel_id == msg.channel.id and
-                payload.message_id == msg.id and
+        if (payload.channel_id == client.rules_msg.channel.id and
+                payload.message_id == client.rules_msg.id and
                 payload.emoji.name == emojize(':thumbsup:', use_aliases=True)
-                and payload.member.roles == newcomer_roles):
+                and payload.member.roles == client.newcomer_roles):
             return True
 
     if user_read_the_rules():
         # Update roles
-        await payload.member.edit(roles=[roles['@everyone'], roles['normal']])
+        await payload.member.edit(roles=[client.roles['@everyone'],
+                                         client.roles['normal']])
         print(f'Updated {payload.member} role to "normal"')
+        client.members_added += 1
 
-        if len(members) == 1:
-            print(f'Handled one member join! Logging out now...')
-            await logout()
+    if client.members_added == 1:
+        print(f'Handled one member join! Logging out now...')
+        await logout()
 
 if __name__ == '__main__':
     try:
