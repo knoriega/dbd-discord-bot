@@ -109,7 +109,10 @@ async def on_raw_reaction_add(payload):
         # Update roles
         await payload.member.edit(roles=[client.roles['@everyone'],
                                          client.roles['normal']])
-        client.logger.info(f'Updated {payload.member} role to "normal"')
+        # Fetch data to confirm change was made
+        member = await client.primary_guild.fetch_member(payload.member.id)
+        client.logger.info(f'Updated {payload.member} role to "normal" --'
+                           f'{member.roles}')
         client.members_added += 1
 
 
