@@ -1,8 +1,9 @@
 import os
 import asyncio
 import discord
-import functools
+import traceback
 
+from emoji import emojize
 from time import sleep
 from dotenv import load_dotenv
 
@@ -11,50 +12,35 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
-
-class RuntimeAttrs:
-    def __init__(self):
-        pass
-
-
 client = discord.Client()
-setattr(client, 'runtime_attr', RuntimeAttrs())
+
+# Properties -- Initialized here
+guilds = {}
+roles = {}  # Key: role names, Value: role objects
+channels = {}
+rules_msg = []
+members = []
 
 
-def logout_on_exception(func):
-    """Try-catch block for async Discord callbacks"""
-    @functools.wraps(func)
-    async def wrapper_decorator(*args, **kwargs):
-        try:
-            value = await func(*args, **kwargs)
-            return value
-        except Exception as err:
-            print(f'Error occurred! -- {err}')
-            print(f'Logging out now...')
-            await client.logout()
-
-    return wrapper_decorator
-
-
-async def logout(client):
+async def logout():
     """D/c from Discord in 5"""
     print(f'Disconnecting in...')
-    for i in range(5, 0, -1):
+    for i in range(3, 0, -1):
         print(f'{i}...')
         sleep(1)
     await client.logout()
 
 
 @client.event
-@logout_on_exception
 async def on_ready():
-
     """On connect, what do we do? Stuff and things"""
     print(f'{client.user} has connected to Discord!')
 
     # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
     guild = discord.utils.get(client.guilds, name=GUILD)
-    roles = guild.roles
+    guilds['primary'] = guild
+
+    roles.update({role.name: role for role in guild.roles})
 
     print(f'{client.user} is connected to the following guild:\n'
           f'{guild.name} (id: {guild.id})')
@@ -62,36 +48,57 @@ async def on_ready():
     members = '\n - '.join([member.name for member in guild.members])
     print(f'Guild Members: \n - {members}')
 
-    # Set runtime attrs
-    setattr(client.runtime_attr, 'members_joined', 0)
-    setattr(client.runtime_attr, 'primary_guild', guild)
-    setattr(client.runtime_attr, 'roles', roles)
+    # Get rules message
+    rules = discord.utils.get(guild.channels, name='rules')
+    channels['rules'] = rules
+    rule_pins = await rules.pins()
+    rules_msg.append(rule_pins[0])
+
+    # Set runtime attrs -- to be instance attr later
     print(f'Ready to handle new members!')
 
 
 @client.event
-@logout_on_exception
 async def on_member_join(member):
-    await member.edit(roles=client.runtime_attr.roles[:2])  # Set to newcomer
-    rules = discord.utils.get(client.runtime_attr.primary_guild.channels,
-                              name='rules')
+    await member.edit(roles=[roles['@everyone'], roles['newcomer']])
+    guild = guilds['primary']
 
-    intros = discord.utils.get(client.runtime_attr.primary_guild.channels,
-                               name='introductions')
-
-    spawn_point = discord.utils.get(client.runtime_attr.primary_guild.channels,
-                                    name='spawn-point')
+    intros = discord.utils.get(guild.channels, name='introductions')
+    spawn_point = discord.utils.get(guild.channels, name='spawn-point')
 
     await spawn_point.send(f'Welcome to the realm {member.mention}! \n'
-                           f'Please read the rules to access the rest of the server: {rules.mention} \n'
-                           f'Introduce yourself in the {intros.mention} channel and have fun!')
+                           f'Please read the rules to access the rest of the '
+                           f'server: {channels["rules"].mention} \n'
+                           f'Introduce yourself in the {intros.mention} '
+                           f'channel and have fun!')
 
-    client.runtime_attr.members_joined += 1
-    if client.runtime_attr.members_joined == 1:
+    members.append(member)
+    if len(members) == 1:
         print(f'Handled one member join! Logging out now...')
-        await logout(client)
+        await logout()
+
+
+@client.event
+async def on_error(event, *args, **kwargs):
+    # Logging out on exception
+    print(f'Exception! {emojize(":worried:", use_aliases=True)} {args}')
+    print(traceback.format_exc())
+    print('Logging out b/c of exception...')
+    await logout()
+
 
 # TODO: New member w/ 'newcomer' role must react to rules to be upgraded
+
+
+# @client.event
+# async def on_raw_reaction_add(payload):
+#     roles = client.attr.roles
+#     newcomer_roles = [roles['@everyone'], roles['newcomer']]
+#     if payload.channel_id == client.rules.id and payload.message_id == client.rules_msg.id:
+#         if payload.member.roles == newcomer_roles:
+#             # Update roles
+#             await payload.member.edit(roles=[roles['@everyone'],
+#                                              roles['normal']])
 
 
 if __name__ == '__main__':
