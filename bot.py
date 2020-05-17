@@ -7,7 +7,7 @@ import logging
 from emoji import emojize
 from time import sleep
 from dotenv import load_dotenv
-from loggers import new_logger, formatter
+from loggers import new_logger, add_stream_handler
 
 load_dotenv()
 
@@ -22,12 +22,8 @@ class DbDClient(discord.Client):
         self.roles = {}
         self.rule_msg = None
         self.members_added = 0
-        self.logger = new_logger(self.__class__.__name__, logging.INFO,
-                                 'bot.log')
-        c_handler = logging.StreamHandler()
-        c_handler.setFormatter(formatter)
-        c_handler.setLevel(logging.INFO)
-        self.logger.addHandler(c_handler)
+        self.logger = add_stream_handler(new_logger(
+            self.__class__.__name__, logging.INFO, 'bot.log'))
 
 
 client = DbDClient()

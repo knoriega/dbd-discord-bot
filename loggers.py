@@ -18,4 +18,12 @@ def new_logger(name, level, filename):
     return logger
 
 
+def add_stream_handler(logger):
+    c_handler = logging.StreamHandler()
+    c_handler.setFormatter(formatter)
+    c_handler.setLevel(logging.INFO)
+    logger.addHandler(c_handler)
+    return logger
+
+
 discord_logger = new_logger('discord', logging.INFO, 'discord.log')
