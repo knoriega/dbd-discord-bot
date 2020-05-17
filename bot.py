@@ -14,7 +14,7 @@ GUILD = os.getenv('DISCORD_GUILD')
 
 client = discord.Client()
 
-# Properties -- Initialized here, use in a proper bot class laters
+# Properties -- Initialized here, use in a proper bot class later
 guilds = {}
 roles = {}  # Key: role names, Value: role objects
 channels = {}
@@ -35,6 +35,7 @@ async def logout():
 async def on_ready():
     """On connect, what do we do? Stuff and things"""
     print(f'{client.user} has connected to Discord!')
+    await client.change_presence(activity=discord.Game('at the campfire...'))
 
     # Using Discord utils:  NOTE -- .get() builds a predicate for .find()
     guild = discord.utils.get(client.guilds, name=GUILD)
@@ -54,7 +55,6 @@ async def on_ready():
     rule_pins = await rules.pins()
     rules_msg.append(rule_pins[0])
 
-    # Set runtime attrs -- to be instance attr later
     print(f'Ready to handle new members!')
 
 
