@@ -14,7 +14,7 @@ GUILD = os.getenv('DISCORD_GUILD')
 
 client = discord.Client()
 
-# Properties -- Initialized here
+# Properties -- Initialized here, use in a proper bot class laters
 guilds = {}
 roles = {}  # Key: role names, Value: role objects
 channels = {}
@@ -73,9 +73,6 @@ async def on_member_join(member):
                            f'channel and have fun!')
 
     members.append(member)
-    if len(members) == 1:
-        print(f'Handled one member join! Logging out now...')
-        await logout()
 
 
 @client.event
@@ -90,16 +87,27 @@ async def on_error(event, *args, **kwargs):
 # TODO: New member w/ 'newcomer' role must react to rules to be upgraded
 
 
-# @client.event
-# async def on_raw_reaction_add(payload):
-#     roles = client.attr.roles
-#     newcomer_roles = [roles['@everyone'], roles['newcomer']]
-#     if payload.channel_id == client.rules.id and payload.message_id == client.rules_msg.id:
-#         if payload.member.roles == newcomer_roles:
-#             # Update roles
-#             await payload.member.edit(roles=[roles['@everyone'],
-#                                              roles['normal']])
+@client.event
+async def on_raw_reaction_add(payload):
+    print(f'Handling reaction!: {payload}')
+    newcomer_roles = [roles['@everyone'], roles['newcomer']]
+    msg = rules_msg[0]
 
+    def msg_check():
+        if (payload.channel_id == msg.channel.id and 
+                payload.message_id == msg.id and 
+                payload.emoji.name == emojize(':thumbsup:', use_aliases=True) 
+                and payload.member.roles == newcomer_roles):
+            return True
+
+    if msg_check():
+        # Update roles
+        await payload.member.edit(roles=[roles['@everyone'], roles['normal']])
+        print(f'Updated {payload.member} role to "normal"')
+
+        if len(members) == 1:
+            print(f'Handled one member join! Logging out now...')
+            await logout()
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(client.start(TOKEN))
