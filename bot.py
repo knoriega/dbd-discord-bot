@@ -107,13 +107,18 @@ async def on_raw_reaction_add(payload):
 
     if user_read_the_rules():
         # Update roles
-        await payload.member.edit(roles=[client.roles['@everyone'],
-                                         client.roles['normal']])
+        normal_roles = [client.roles['@everyone'], client.roles['normal']]
+        await payload.member.edit(roles=normal_roles)
+
         # Fetch data to confirm change was made
         member = await client.primary_guild.fetch_member(payload.member.id)
-        client.logger.info(f'Updated {payload.member} role to "normal" --'
-                           f'{member.roles}')
-        client.members_added += 1
+        try:
+            assert member.roles == normal_roles
+            client.logger.info(f'Updated {payload.member} role to "normal" --'
+                               f'{member.roles}')
+            client.members_added += 1
+        except AssertionError:
+            client.logger.error(f'{payload.member} roles were not updated :(')
 
 
 if __name__ == '__main__':
